@@ -6,22 +6,24 @@
 typedef struct {
     int key;
     int value;
-    struct list_head list;
+    struct list_head hash_list;
+    struct list_head lru_list;
 } lru_node_t;
 
 typedef struct {
     int size;
     int capacity;
-    lru_node_t* items;
+    struct list_head *slots;
+    struct list_head lru_head;
+    int nr_slot;
 } lru_cache_t;
 
-lru_cache_t* lru_init(int capacity);
-void lru_deinit(lru_cache_t* cache);
+lru_cache_t* lru_create(int capacity, int slots);
+lru_cache_t* lru_create_easy(int capacity);
+void lru_destory(lru_cache_t* cache);
 int lru_get(lru_cache_t* cache, int key);
 void lru_put(lru_cache_t* cache, int key, int value);
 
 // debug function
-void print_cache(lru_cache_t* cache);
-void print_list();
-
+void print_lru_cache(lru_cache_t* cache);
 #endif

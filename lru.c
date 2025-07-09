@@ -2,71 +2,76 @@
 #include <stdlib.h>
 #include "lru.h"
 
-// #define DEBUG
+lru_cache_t* lru_create_easy(int capacity)
+{
+    lru_create(capacity, capacity);
+}
 
-static struct list_head* lru_head;
-
-static lru_cache_t* lru_create(int capacity) {
+lru_cache_t* lru_create(int capacity, int slots) {
     lru_cache_t* cache = (lru_cache_t*)malloc(sizeof(lru_cache_t));
+    if(slots < capacity)
+        slots = capacity;
+    cache->nr_slot = slots;
     cache->size = 0;
     cache->capacity = capacity;
-    cache->items = calloc(capacity, sizeof(lru_node_t));
+    cache->slots = malloc(cache->nr_slot * sizeof(struct list_head));
 
-    for(int i=0; i < capacity; i++) {
-        cache->items[i].key = i;
-        cache->items[i].value = -1;
+    list_inithead(&cache->lru_head);
+    for (int i = 0; i < cache->nr_slot; i++) {
+        list_inithead(&cache->slots[i]);
     }
 
     return cache;
 }
 
-static void lru_destory(lru_cache_t* cache)
+void lru_destory(lru_cache_t* cache)
 {
-    list_for_each_entry_safe(lru_node_t, pos, lru_head, list) {
-        list_del(&pos->list);
+    list_for_each_entry_safe(lru_node_t, pos, &cache->lru_head, lru_list) {
+        list_del(&pos->lru_list);
         free(pos);
     }
 
-    free(cache->items);
+    free(cache->slots);
     free(cache);
 }
 
 void print_cache(lru_cache_t* cache)
 {
-    printf("cache list: ");
-    for(int i=0; i < cache->capacity; i++) {
-        if(cache->items[i].value == -1)
+    printf("cache: ");
+    for (int i = 0; i < cache->nr_slot; i++) {
+        if(list_is_empty(&cache->slots[i])) {
+            printf(" [] ");
             continue;
-        printf("%d[%d] ", cache->items[i].key, cache->items[i].value);
+        }
+
+        list_for_each_entry_safe(lru_node_t, pos, &cache->slots[i], hash_list) {
+                printf("%d:%d[%d] ", i, pos->key, pos->value);
+        }
     }
-    printf("\n");
+    printf("\n--------------------------------------------------------------\n");
 }
 
-void print_list()
+void print_list(lru_cache_t* cache)
 {
     printf("--------------------------------------------------------------\n");
     printf("head <--> ");
-    list_for_each_entry(lru_node_t, pos, lru_head, list) {
+    list_for_each_entry(lru_node_t, pos, &cache->lru_head, lru_list) {
         printf("%d[%d] <--> ", pos->key, pos->value);
     }
-    printf("tail");
-    printf("\n--------------------------------------------------------------\n");
+    printf("tail\n");
+}
+
+void print_lru_cache(lru_cache_t* cache)
+{
+    print_list(cache);
+    print_cache(cache);
 }
 
 static void lru_removetail(lru_cache_t* cache, lru_node_t* new)
 {
-    lru_node_t* node = list_last_entry(lru_head, lru_node_t, list);
-    list_del(lru_head->prev);
-
-#ifdef DEBUG
-    printf("key:%d free:%p\n", node->key, node);
-#endif
-
-    for (int i=0; i < cache->capacity; i++) {
-        if(cache->items[i].value != -1 && cache->items[i].key == node->key) {
-            cache->items[i] = *new;
-        }
-    }
+    lru_node_t* node = list_last_entry(&cache->lru_head, lru_node_t, lru_list);
+    list_del(&node->lru_list);
+    list_del(&node->hash_list);
 
     free(node);
     cache->size--;
@@ -74,34 +79,32 @@ static void lru_removetail(lru_cache_t* cache, lru_node_t* new)
 
 void lru_put(lru_cache_t* cache, int key, int value)
 {
-    int index = key % cache->capacity;
-    
-    for (int i=0; i < cache->capacity; i++) {
-        if(cache->items[i].value != -1 && cache->items[i].key == key) {
-            list_for_each_entry_safe(lru_node_t, pos, lru_head, list) {
-                if (key == pos->key) {
-                    pos->value = value;
-                    list_move_to(&pos->list, lru_head);
-                }
+    int index = key % cache->nr_slot;
+
+    if(cache == NULL)
+        return;
+
+    if(!list_is_empty(&cache->slots[index])) {
+        list_for_each_entry(lru_node_t, pos, &cache->slots[index], hash_list) {
+            if(key == pos->key) {
+                pos->value = value;
+                list_move_to(&pos->lru_list, &cache->lru_head);
+                return;
             }
-            cache->items[i].value = value;
-            return ;
         }
     }
 
     lru_node_t* node = malloc(sizeof(lru_node_t));
     node->value = value;
     node->key = key;
+    list_inithead(&node->hash_list);
+    list_inithead(&node->lru_list);
     cache->size++;
-    list_add(&node->list, lru_head);
-#ifdef DEBUG
-    printf("key:%d new:%p list:%p\n", node->key, node, node->list);
-#endif
+    list_add(&node->lru_list, &cache->lru_head);
+    list_add(&node->hash_list, &cache->slots[index]);
 
     if (cache->size > cache->capacity) {
         lru_removetail(cache, node);
-    } else{
-        cache->items[index] = *node;
     }
 
     return;
@@ -109,28 +112,20 @@ void lru_put(lru_cache_t* cache, int key, int value)
 
 int lru_get(lru_cache_t* cache, int key)
 {
-    for (int i=0; i < cache->capacity; i++) {
-        if (cache->items[i].value != -1 && cache->items[i].key == key) {
-            list_for_each_entry_safe(lru_node_t, pos, lru_head, list) {
-                if (key == pos->key) {
-                    list_move_to(&pos->list, lru_head);
-                    return pos->value;
-                }
-            }
+    int index = key % cache->nr_slot;
+
+    if(cache == NULL)
+        return -1;
+
+    if(list_is_empty(&cache->slots[index]))
+        return -1;
+
+    list_for_each_entry_safe(lru_node_t, pos, &cache->slots[index], hash_list) {
+        if(key == pos->key) {
+            list_move_to(&pos->lru_list, &cache->lru_head);
+            return pos->value;
         }
     }
+
     return -1;
-}
-
-lru_cache_t* lru_init(int capacity)
-{
-    lru_head = malloc(sizeof(struct list_head));
-    list_inithead(lru_head);
-    return lru_create(capacity);
-}
-
-void lru_deinit(lru_cache_t* cache)
-{
-    lru_destory(cache);
-    free(lru_head);
 }
