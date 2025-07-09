@@ -2,7 +2,7 @@
 LRU算法的C语言实现版本，用作C语言环境下的缓存版本
 ## API
 简单的API接口:
-``
+```
 lru_cache_t* lru_create(int capacity, int slots);
 lru_cache_t* lru_create_easy(int capacity);
 void lru_destory(lru_cache_t* cache);
