@@ -10,8 +10,7 @@ int lru_get(lru_cache_t* cache, int key);
 void lru_put(lru_cache_t* cache, int key, int value);
 ```
 ## 说明
-`lru_create`提供了lru算法的创建函数，支持缓存容量capacity，hash的加载槽数量slots两个参数。    
-capacity越大则lru缓存算法容量越大，slots越大，则hash碰撞概率越底，算法更趋向于O(1)，slots不小于capacity。   
+`lru_create`提供了lru算法的创建函数，支持缓存容量capacity，hash的加载槽数量slots两个参数。capacity越大则lru缓存算法容量越大，slots越大，则hash碰撞概率越底，算法更趋向于O(1)，slots不小于capacity。     
 `lru_create_easy`提供了lru算法的简单创建函数，默认将slots设置为capacity。   
 `lru_destory`lru算法的销毁函数，和`lru_create`成对出现   
 `lru_get`提供lru算法的查询，如果在缓存中，则通过hash直接取出，否则返回-1   
