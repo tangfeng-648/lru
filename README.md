@@ -21,10 +21,10 @@ void lru_put(lru_cache_t* cache, int key, int value);
 `gcc -I. main.c lru.c -o lru`
 
 提供五种测试案例:
-1. 来自https://www.geeksforgeeks.org/dsa/design-a-data-structure-for-lru-cache/的数据测试
-2. 来自https://www.geeksforgeeks.org/operating-systems/page-replacement-algorithms-in-operating-systems/的数据测试
-3. 来自https://www.scaler.com/topics/lru-page-replacement-algorithm/的数据测试
-4. 来自https://www.geeksforgeeks.org/system-design/lru-cache-implementation/的数据测试
+1. 来自https://www.geeksforgeeks.org/dsa/design-a-data-structure-for-lru-cache/   的数据测试
+2. 来自https://www.geeksforgeeks.org/operating-systems/page-replacement-algorithms-in-operating-systems/   的数据测试
+3. 来自https://www.scaler.com/topics/lru-page-replacement-algorithm/   的数据测试
+4. 来自https://www.geeksforgeeks.org/system-design/lru-cache-implementation/   的数据测试
 5. 循环压力测试
 
 测试结果可观测
