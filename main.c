@@ -87,11 +87,10 @@ int main ()
 #endif
 
 #ifdef TEST5
-    int count = 0;
     lru_cache = lru_create(5, 10);
     while(1){
         lru_put_and_print(lru_cache, get_random(), get_random());
-        if(count = 10)
+        if(get_random() % 10 == 0)
             lru_get_and_print(lru_cache, get_random());
         usleep(100000);
     }

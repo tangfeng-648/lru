@@ -13,9 +13,9 @@ typedef struct {
 typedef struct {
     int size;
     int capacity;
+    int nr_slot;
     struct list_head *slots;
     struct list_head lru_head;
-    int nr_slot;
 } lru_cache_t;
 
 lru_cache_t* lru_create(int capacity, int slots);
